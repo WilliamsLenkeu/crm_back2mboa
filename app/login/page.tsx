@@ -31,8 +31,9 @@ export default function LoginPage() {
         onSubmit={onSubmit}
         className="w-full max-w-[400px] crm-card p-8 shadow-[var(--shadow-1)]"
       >
-        <div className="w-10 h-10 rounded-[var(--radius)] bg-[var(--color-primary)] text-white grid place-items-center text-[13px] font-bold tracking-tight mb-5">
-          B2
+        <div className="mb-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="Back2Mboa" width={40} height={40} className="rounded-[var(--radius)]" />
         </div>
         <h1 className="text-[22px] mb-1">Back2Mboa CRM</h1>
         <p className="text-[14px] text-[var(--text-secondary)] mb-6">

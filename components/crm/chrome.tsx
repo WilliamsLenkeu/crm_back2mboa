@@ -110,9 +110,8 @@ export function Sidebar({
           ${open ? "crm-sidebar--open" : ""}`}
       >
         <div className="crm-sidebar-brand flex items-center h-14 border-b border-[var(--border-default)] shrink-0 gap-2.5 px-3">
-          <span className="w-8 h-8 rounded-[7px] bg-[var(--color-primary)] text-white grid place-items-center text-[11px] font-bold shrink-0">
-            B2
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="" width={32} height={32} className="shrink-0 rounded-[7px]" />
           <div className="crm-sidebar-label min-w-0 leading-tight">
             <p className="text-[14px] font-bold truncate">Back2Mboa</p>
             <p className="text-[11px] text-[var(--color-primary)] font-semibold">CRM</p>

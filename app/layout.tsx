@@ -5,6 +5,14 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Back2Mboa CRM",
   description: "Gestion des acteurs Back2Mboa",
+  icons: {
+    icon: [
+      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/logo.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/logo.png", sizes: "180x180", type: "image/png" }],
+  },
+  applicationName: "Back2Mboa CRM",
 };
 
 export default function RootLayout({
