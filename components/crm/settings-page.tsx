@@ -24,10 +24,12 @@ export function SettingsPage({
   prefs,
   onSavePrefs,
   email,
+  isAdmin = false,
 }: {
   prefs: UserPrefs;
   onSavePrefs: (p: UserPrefs) => Promise<void>;
   email?: string | null;
+  isAdmin?: boolean;
 }) {
   const { d } = useLocale();
   const [section, setSection] = useState<Section>("language");
@@ -96,7 +98,7 @@ export function SettingsPage({
         </nav>
 
         <div className="flex-1 min-h-0 overflow-auto crm-scroll md:border-l md:border-[var(--border-default)] md:pl-6">
-          <div className="max-w-xl pb-8">
+          <div className="pb-8 max-w-xl">
             {section === "language" ? (
               <section className="space-y-5">
                 <header className="pb-4 border-b border-[var(--border-default)]">
@@ -176,18 +178,20 @@ export function SettingsPage({
                       <option value="contacts">{d.contacts}</option>
                       <option value="pipeline">{d.pipeline}</option>
                       <option value="settings">{d.settings}</option>
+                      {isAdmin ? <option value="users">{d.sectionUsers}</option> : null}
                     </select>
-                    <p className="text-[11px] text-[var(--text-tertiary)] mt-1">{d.homePageHint}</p>
+                    <p className="text-[12px] text-[var(--text-tertiary)] mt-1.5">{d.homePageHint}</p>
                   </div>
                   <div>
                     <label className="crm-label">{d.defaultActeur}</label>
                     <select
                       className="crm-input"
-                      value={local.formDefaultActeur || ACTEURS[0].k}
+                      value={local.formDefaultActeur || ""}
                       onChange={(e) =>
-                        void persist({ ...local, formDefaultActeur: e.target.value })
+                        void persist({ ...local, formDefaultActeur: e.target.value || undefined })
                       }
                     >
+                      <option value="">—</option>
                       {ACTEURS.map((a) => (
                         <option key={a.k} value={a.k}>
                           {a.l}
@@ -215,9 +219,14 @@ function Toggle({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center justify-between gap-4 cursor-pointer py-3 border-b border-[var(--border-default)] last:border-0">
-      <span className="block text-[14px] font-medium">{label}</span>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <label className="flex items-center justify-between gap-3 py-2.5 cursor-pointer">
+      <span className="text-[14px]">{label}</span>
+      <input
+        type="checkbox"
+        className="w-4 h-4 accent-[var(--color-primary)]"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
     </label>
   );
 }

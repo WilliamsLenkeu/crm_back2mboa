@@ -75,6 +75,10 @@ async function ensureAdmin() {
   const existing = await users.findOne({ email });
   if (existing) {
     await users.updateOne({ id: existing.id }, { $set: { role: "admin" } });
+    await users.updateMany(
+      { role: { $in: ["member", "user"] } },
+      { $set: { role: "manager" } },
+    );
     console.log("Admin déjà présent:", email);
     return existing.id as string;
   }
@@ -83,6 +87,10 @@ async function ensureAdmin() {
   });
   const id = res.user.id;
   await users.updateOne({ id }, { $set: { role: "admin" } });
+  await users.updateMany(
+    { role: { $in: ["member", "user"] } },
+    { $set: { role: "manager" } },
+  );
   console.log("Admin créé:", email, "/", password);
   return id;
 }

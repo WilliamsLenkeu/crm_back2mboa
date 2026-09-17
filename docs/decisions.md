@@ -77,7 +77,11 @@
 - Collections : `contacts`, `journal_entries`, `user_settings` (+ auth)
 - Env : `MONGODB_URI` ; scripts `db:indexes` / `seed` / `db:setup`
 
-## 2026-09-16 — Prêt Vercel
-- `.gitignore` : tous les `.env*` exclus (plus de `.env.example`)
-- `vercel.json` (pnpm) ; Better Auth `baseURL` compatible `*.vercel.app`
-- Procédure deploy : `docs/procedures.md`
+## 2026-09-17 — Contacts lazy load
+- GET `/api/contacts` paginé (`limit`/`offset`) ; backfill `formToken` retiré du hot path
+- Client : 50 premiers affichés tout de suite, puis lots de 100 en arrière-plan (AbortController)
+
+## 2026-09-17 — Comptes admin / manager
+- Rôles : `admin` (gestion comptes) | `manager` (CRM sans gestion users)
+- Plugin Better Auth `admin` ; signup public désactivé
+- Settings → section Comptes (admin) : créer manager (nom, email, password) + liste / suppression

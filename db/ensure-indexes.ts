@@ -12,6 +12,10 @@ export async function ensureIndexes() {
     { key: { etapePipeline: 1 }, name: "contacts_etape" },
     { key: { ownerId: 1 }, name: "contacts_owner" },
     { key: { score: -1 }, name: "contacts_score" },
+    { key: { createdAt: -1 }, name: "contacts_created" },
+    { key: { score: -1, nom: 1 }, name: "contacts_score_nom" },
+    { key: { acteur: 1, score: -1 }, name: "contacts_acteur_score" },
+    { key: { acteur: 1, createdAt: -1 }, name: "contacts_acteur_created" },
   ]);
 
   await collections.journal().createIndexes([
@@ -40,4 +44,10 @@ export async function ensureIndexes() {
   await db.collection("session").createIndex({ userId: 1 }, { name: "session_user" });
   await db.collection("account").createIndex({ userId: 1 }, { name: "account_user" });
   await db.collection("verification").createIndex({ identifier: 1 }, { name: "verification_identifier" });
+
+  // rôles legacy → manager
+  await db.collection("user").updateMany(
+    { role: { $in: ["member", "user"] } },
+    { $set: { role: "manager" } },
+  );
 }

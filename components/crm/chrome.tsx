@@ -58,6 +58,7 @@ export function Sidebar({
   counts,
   recent,
   email,
+  isAdmin = false,
   showTypes = true,
   showRecents = true,
   onClose,
@@ -75,6 +76,7 @@ export function Sidebar({
   counts: Record<string, number>;
   recent: { id: string; nom: string }[];
   email?: string | null;
+  isAdmin?: boolean;
   showTypes?: boolean;
   showRecents?: boolean;
   onClose: () => void;
@@ -89,6 +91,7 @@ export function Sidebar({
     { k: "dashboard", l: d.dashboard, icon: ICONS.dashboard },
     { k: "contacts", l: d.contacts, icon: ICONS.users },
     { k: "pipeline", l: d.pipeline, icon: ICONS.pipeline },
+    ...(isAdmin ? [{ k: "users" as const, l: d.sectionUsers, icon: ICONS.accounts }] : []),
     { k: "settings", l: d.settings, icon: ICONS.settings },
   ];
 

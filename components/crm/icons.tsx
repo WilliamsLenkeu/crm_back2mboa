@@ -4,6 +4,7 @@ export const ICONS = {
   search: "bi-search",
   dashboard: "bi-grid-1x2",
   users: "bi-people",
+  accounts: "bi-person-badge",
   pipeline: "bi-kanban",
   settings: "bi-gear",
   export: "bi-download",

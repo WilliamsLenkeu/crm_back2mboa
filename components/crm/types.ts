@@ -33,7 +33,7 @@ export type Contact = {
   journal?: { id: string; texte: string; createdAt?: string | number | Date }[];
 };
 
-export type Page = "dashboard" | "contacts" | "pipeline" | "settings";
+export type Page = "dashboard" | "contacts" | "pipeline" | "settings" | "users";
 export type QuickView =
   | "all"
   | "haute"

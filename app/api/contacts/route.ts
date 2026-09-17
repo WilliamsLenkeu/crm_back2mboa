@@ -6,29 +6,44 @@ import { calcCompletude } from "@/lib/utils";
 import { newFormToken } from "@/lib/public-form";
 import type { Filter, Sort } from "mongodb";
 
+/** Champs liste / dashboard / pipeline — le détail complet vient de GET /[id]. */
+const LIST_PROJECTION = {
+  _id: 0,
+  id: 1,
+  nom: 1,
+  acteur: 1,
+  organisation: 1,
+  fonction: 1,
+  email: 1,
+  telephone: 1,
+  pays: 1,
+  ville: 1,
+  secteur: 1,
+  source: 1,
+  priorite: 1,
+  score: 1,
+  etapePipeline: 1,
+  completude: 1,
+  createdAt: 1,
+  updatedAt: 1,
+} as const;
+
 export async function GET(req: NextRequest) {
   const { session, error } = await requireSession();
   if (error) return error;
 
   const col = collections.contacts();
-
-  // backfill tokens manquants (lots de 80)
-  const orphans = await col
-    .find({ $or: [{ formToken: null }, { formToken: { $exists: false } }, { formToken: "" }] })
-    .project({ id: 1 })
-    .limit(80)
-    .toArray();
-  for (const o of orphans) {
-    await col.updateOne({ id: o.id }, { $set: { formToken: newFormToken(), updatedAt: new Date() } });
-  }
-
   const sp = req.nextUrl.searchParams;
   const acteur = sp.get("acteur");
   const q = sp.get("q")?.trim();
   const etape = sp.get("etape");
   const priorite = sp.get("priorite");
-  const sortKey = sp.get("sort") || "score";
+  const sortKey = sp.get("sort") || "created";
   const dir = sp.get("dir") === "asc" ? 1 : -1;
+  const limitRaw = Number(sp.get("limit"));
+  const offset = Math.max(0, Number(sp.get("offset")) || 0);
+  const limit = Math.min(250, Math.max(1, Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 50));
+  const wantCounts = sp.get("counts") !== "0" && offset === 0;
 
   const filter: Filter<ContactDoc> = {};
   if (acteur) filter.acteur = acteur;
@@ -54,18 +69,41 @@ export async function GET(req: NextRequest) {
           ? "etapePipeline"
           : sortKey === "completude"
             ? "completude"
-            : "score";
+            : sortKey === "score"
+              ? "score"
+              : sortKey === "updated"
+                ? "updatedAt"
+                : "createdAt";
 
   const sort: Sort = { [sortField]: dir };
-  const rows = await col.find(filter, { projection: { _id: 0 } }).sort(sort).toArray();
 
-  const countsAgg = await col
-    .aggregate<{ _id: string; n: number }>([{ $group: { _id: "$acteur", n: { $sum: 1 } } }])
+  const rowsP = col
+    .find(filter, { projection: LIST_PROJECTION })
+    .sort(sort)
+    .skip(offset)
+    .limit(limit)
     .toArray();
+
+  const totalP = col.countDocuments(filter);
+  const countsP = wantCounts
+    ? col.aggregate<{ _id: string; n: number }>([{ $group: { _id: "$acteur", n: { $sum: 1 } } }]).toArray()
+    : Promise.resolve([] as { _id: string; n: number }[]);
+
+  const [rows, total, countsAgg] = await Promise.all([rowsP, totalP, countsP]);
+
   const counts = countsAgg.map((c) => ({ acteur: c._id, n: c.n }));
+  const nextOffset = offset + rows.length;
 
   void session;
-  return NextResponse.json({ rows, counts });
+  return NextResponse.json({
+    rows,
+    counts: wantCounts ? counts : undefined,
+    total,
+    offset,
+    limit,
+    hasMore: nextOffset < total,
+    nextOffset,
+  });
 }
 
 export async function POST(req: NextRequest) {

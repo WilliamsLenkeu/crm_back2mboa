@@ -13,7 +13,9 @@ import { Dashboard } from "./crm/dashboard";
 import { PipelinePage } from "./crm/pipeline-page";
 import { LocaleProvider } from "./crm/locale-context";
 import { ExportModal } from "./crm/export-modal";
+import { SessionKeepalive } from "./crm/session-keepalive";
 import { SettingsPage, type UserPrefs } from "./crm/settings-page";
+import { UsersPage } from "./crm/users-page";
 import type { Locale } from "@/lib/i18n";
 import { t } from "@/lib/i18n";
 import {
@@ -39,7 +41,8 @@ function readSavedPage(): Page {
       saved === "dashboard" ||
       saved === "contacts" ||
       saved === "pipeline" ||
-      saved === "settings"
+      saved === "settings" ||
+      saved === "users"
     ) {
       return saved;
     }
@@ -57,7 +60,7 @@ export default function CrmShell() {
   const [view, setView] = useState<QuickView>("all");
   const [q, setQ] = useState("");
   const [qDeb, setQDeb] = useState("");
-  const [sort, setSort] = useState<SortKey>("score");
+  const [sort, setSort] = useState<SortKey>("created");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [rows, setRows] = useState<Contact[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -76,6 +79,7 @@ export default function CrmShell() {
   const [pageReady, setPageReady] = useState(false);
   const colSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cmdRef = useRef<HTMLInputElement>(null);
+  const loadAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setRecent(loadRecent());
@@ -104,27 +108,83 @@ export default function CrmShell() {
   }, [page, pageReady]);
 
   useEffect(() => {
+    if (page === "users" && session?.user && session.user.role !== "admin") {
+      setPage("dashboard");
+    }
+  }, [page, session?.user]);
+
+  useEffect(() => {
     const t = setTimeout(() => setQDeb(q), 200);
     return () => clearTimeout(t);
   }, [q]);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
+    loadAbort.current?.abort();
+    const ac = new AbortController();
+    loadAbort.current = ac;
+
     if (!opts?.silent) setLoading(true);
-    const sp = new URLSearchParams();
-    if (acteur) sp.set("acteur", acteur);
-    if (qDeb) sp.set("q", qDeb);
-    const res = await fetch(`/api/contacts?${sp}`);
-    const data = await res.json();
-    setRows(data.rows || []);
-    const c: Record<string, number> = {};
-    for (const x of data.counts || []) c[x.acteur] = x.n;
-    setCounts(c);
-    if (!opts?.silent) setLoading(false);
-    setSelected(new Set());
+
+    const base = new URLSearchParams();
+    if (acteur) base.set("acteur", acteur);
+    if (qDeb) base.set("q", qDeb);
+
+    try {
+      const firstSp = new URLSearchParams(base);
+      firstSp.set("limit", "50");
+      firstSp.set("offset", "0");
+      firstSp.set("sort", "created");
+      firstSp.set("dir", "desc");
+      const res = await fetch(`/api/contacts?${firstSp}`, { signal: ac.signal });
+      const data = await res.json();
+      if (ac.signal.aborted) return;
+
+      const first = (data.rows || []) as Contact[];
+      setRows(first);
+      const c: Record<string, number> = {};
+      for (const x of data.counts || []) c[x.acteur] = x.n;
+      setCounts(c);
+      if (!opts?.silent) setLoading(false);
+      setSelected(new Set());
+
+      const total = Number(data.total) || first.length;
+      if (first.length >= total || ac.signal.aborted) return;
+
+      const CHUNK = 150;
+      const offsets: number[] = [];
+      for (let o = first.length; o < total; o += CHUNK) offsets.push(o);
+
+      // lots en parallèle (3 à la fois) — plus rapide qu’un while séquentiel
+      const PARALLEL = 3;
+      for (let i = 0; i < offsets.length; i += PARALLEL) {
+        if (ac.signal.aborted) return;
+        const slice = offsets.slice(i, i + PARALLEL);
+        const chunks = await Promise.all(
+          slice.map(async (offset) => {
+            const sp = new URLSearchParams(base);
+            sp.set("limit", String(CHUNK));
+            sp.set("offset", String(offset));
+            sp.set("counts", "0");
+            sp.set("sort", "created");
+            sp.set("dir", "desc");
+            const r = await fetch(`/api/contacts?${sp}`, { signal: ac.signal });
+            const j = await r.json();
+            return (j.rows || []) as Contact[];
+          }),
+        );
+        if (ac.signal.aborted) return;
+        const batch = chunks.flat();
+        if (batch.length) setRows((prev) => [...prev, ...batch]);
+      }
+    } catch (e) {
+      if ((e as Error).name === "AbortError") return;
+      if (!opts?.silent) setLoading(false);
+    }
   }, [acteur, qDeb]);
 
   useEffect(() => {
     void load();
+    return () => loadAbort.current?.abort();
   }, [load]);
 
   useEffect(() => {
@@ -447,6 +507,7 @@ export default function CrmShell() {
   return (
     <LocaleProvider locale={(prefs.locale as Locale) || "fr"}>
     <div className="flex h-dvh overflow-hidden">
+      <SessionKeepalive />
       <Sidebar
         open={navOpen}
         collapsed={!!prefs.sidebarCollapsed}
@@ -456,6 +517,7 @@ export default function CrmShell() {
         counts={counts}
         recent={recent}
         email={session?.user?.email}
+        isAdmin={session?.user?.role === "admin"}
         showTypes={prefs.showNavTypes !== false}
         showRecents={prefs.showNavRecents !== false}
         onClose={() => setNavOpen(false)}
@@ -547,8 +609,11 @@ export default function CrmShell() {
                 prefs={prefs}
                 onSavePrefs={savePrefs}
                 email={session?.user?.email}
+                isAdmin={session?.user?.role === "admin"}
               />
             ) : null}
+
+            {page === "users" && session?.user?.role === "admin" ? <UsersPage /> : null}
           </div>
         </div>
       </div>
@@ -601,6 +666,7 @@ export default function CrmShell() {
           setTimeout(() => cmdRef.current?.focus(), 50);
         }}
         onRefresh={() => void load({ silent: true })}
+        isAdmin={session?.user?.role === "admin"}
       />
     </div>
     </LocaleProvider>

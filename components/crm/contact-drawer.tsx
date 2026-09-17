@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ACTEURS, ETAPES, PRIORITES, SOURCES } from "@/lib/acteurs";
 import { prioLabel, stageLabel } from "@/lib/i18n";
 import { initials } from "@/lib/utils";
@@ -301,23 +301,18 @@ export function ContactDrawer({
                   <input className="crm-input" value={form.tags || ""} onChange={(e) => set("tags", e.target.value)} />
                 </Field>
               </div>
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+              <div className="space-y-3">
                 <Field label={d.fieldContexte}>
-                  <textarea className="crm-input" value={form.role || ""} onChange={(e) => set("role", e.target.value)} />
+                  <AutoGrowTextarea value={form.role || ""} onChange={(v) => set("role", v)} />
                 </Field>
                 <Field label={d.fieldPourquoi}>
-                  <textarea
-                    className="crm-input"
+                  <AutoGrowTextarea
                     value={form.pourquoi || form.msg || ""}
-                    onChange={(e) => set("pourquoi", e.target.value)}
+                    onChange={(v) => set("pourquoi", v)}
                   />
                 </Field>
                 <Field label={d.fieldNotes}>
-                  <textarea
-                    className="crm-input"
-                    value={form.notes || ""}
-                    onChange={(e) => set("notes", e.target.value)}
-                  />
+                  <AutoGrowTextarea value={form.notes || ""} onChange={(v) => set("notes", v)} />
                 </Field>
               </div>
               {!isDraft && form.formToken ? (
@@ -360,11 +355,10 @@ export function ContactDrawer({
                 )}
               </div>
               <Field label={d.drawerAddNote}>
-                <textarea
-                  className="crm-input"
+                <AutoGrowTextarea
                   placeholder={d.drawerNotePh}
                   value={note}
-                  onChange={(e) => setNote(e.target.value)}
+                  onChange={setNote}
                 />
               </Field>
               <button
@@ -402,5 +396,35 @@ export function ContactDrawer({
         </div>
       </div>
     </div>
+  );
+}
+
+function AutoGrowTextarea({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      className="crm-input !h-auto !min-h-0 resize-none overflow-hidden !py-2 leading-normal"
+      rows={1}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }

@@ -6,7 +6,7 @@ Assistant de développement sur le CRM multi-acteurs Back2Mboa.
 ## Stack
 - Next.js (App Router) + TypeScript + Tailwind v4
 - MongoDB Atlas (`mongodb` driver) — CRM + Better Auth
-- Better Auth (`mongodbAdapter`, email/password, rôles `admin` | `member`)
+- Better Auth (`mongodbAdapter`, email/password, rôles `admin` | `manager`)
 - Déploiement cible : **Vercel**
 - pnpm obligatoire
 

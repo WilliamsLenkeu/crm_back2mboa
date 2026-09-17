@@ -12,11 +12,13 @@ export function CrmContextMenu({
   onCreate,
   onSearch,
   onRefresh,
+  isAdmin = false,
 }: {
   onNavigate: (p: Page) => void;
   onCreate: () => void;
   onSearch: () => void;
   onRefresh: () => void;
+  isAdmin?: boolean;
 }) {
   const { d } = useLocale();
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -53,6 +55,9 @@ export function CrmContextMenu({
     { label: d.dashboard, icon: "bi-grid-1x2", action: () => onNavigate("dashboard") },
     { label: d.contacts, icon: "bi-people", action: () => onNavigate("contacts") },
     { label: d.pipeline, icon: "bi-kanban", action: () => onNavigate("pipeline") },
+    ...(isAdmin
+      ? [{ label: d.sectionUsers, icon: "bi-person-badge", action: () => onNavigate("users") }]
+      : []),
     { label: d.settings, icon: "bi-gear", action: () => onNavigate("settings") },
   ];
 
